@@ -113,6 +113,7 @@ class Pix2PixModel(BaseModel):
             # define loss functions
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
+            self.criterionL2 = torch.nn.MSELoss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -184,6 +185,10 @@ class Pix2PixModel(BaseModel):
         ver_detect = conv_ver(input)
 
         return [edge_detect, hor_detect, ver_detect]
+    
+    def cohen_fq(self, src_img):
+        return torch.fft.fftn(src_img, dim=(-2,-1))
+
     
     def frequency_division(self,src_img):
         #input:src_img    type:tensor
@@ -299,12 +304,23 @@ class Pix2PixModel(BaseModel):
         
 
         if 'fft' in self.opt.pattern:
-            prenet = torch.load('models/vgg19_conv.pth')
-            self.weight1_1 = prenet['conv1_1.weight'].type(torch.FloatTensor).cuda()
+            #prenet = torch.load('models/vgg19_conv.pth')
+            #self.weight1_1 = prenet['conv1_1.weight'].type(torch.FloatTensor).cuda()
             #self.weight1_1 = prenet['conv1_1.weight'].type(torch.FloatTensor)
-            fake_low,fake_high = self.frequency_division(self.fake_B)
-            real_low,real_high = self.frequency_division(self.real_B)
-            self.loss_G_fft = self.criterionL1(fake_low.to(self.opt.gpu_ids[0]),real_low.to(self.opt.gpu_ids[0]))*self.opt.weight_low_L1+self.criterionL1(fake_high.to(self.opt.gpu_ids[0]),real_high.to(self.opt.gpu_ids[0]))*self.opt.weight_high_L1
+            #fake_low,fake_high = self.frequency_division(self.fake_B)
+            #real_low,real_high = self.frequency_division(self.real_B)
+            #self.loss_G_fft = self.criterionL1(fake_low.to(self.opt.gpu_ids[0]),real_low.to(self.opt.gpu_ids[0]))*self.opt.weight_low_L1+self.criterionL1(fake_high.to(self.opt.gpu_ids[0]),real_high.to(self.opt.gpu_ids[0]))*self.opt.weight_high_L1
+            fake_fft_m = torch.real(self.cohen_fq(self.fake_B))
+            real_fft_m = torch.real(self.cohen_fq(self.real_B))
+            fake_fft_m = (fake_fft_m - torch.mean(fake_fft_m)) / torch.std(fake_fft_m)
+            real_fft_m = (real_fft_m - torch.mean(real_fft_m)) / torch.std(real_fft_m)
+
+            #fake_fft_p = torch.imag(self.cohen_fq(self.fake_B))
+            #real_fft_p = torch.imag(self.cohen_fq(self.real_B))
+            #fake_fft_p = (fake_fft_p - torch.mean(fake_fft_p)) / torch.std(fake_fft_p)
+            #real_fft_p = (real_fft_p - torch.mean(real_fft_p)) / torch.std(real_fft_p)
+
+            self.loss_G_fft = 1*(self.criterionL2(fake_fft_m.to(self.opt.gpu_ids[0]),real_fft_m.to(self.opt.gpu_ids[0]))) #+ self.criterionL2(fake_fft_p.to(self.opt.gpu_ids[0]),real_fft_p.to(self.opt.gpu_ids[0])))
             self.loss_G += self.loss_G_fft
 
         if 'perc' in self.opt.pattern or 'contextual' in self.opt.pattern:

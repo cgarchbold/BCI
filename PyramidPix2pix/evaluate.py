@@ -27,7 +27,7 @@ def psnr_and_ssim(result_path):
                 real = cv.imread(os.path.join(result_path,'test_latest/images',i.replace('fake_B','real_B')))
                 PSNR = peak_signal_noise_ratio(fake, real)
                 psnr.append(PSNR)
-                SSIM = structural_similarity(fake, real, multichannel=True)
+                SSIM = structural_similarity(fake, real, channel_axis=2)
                 ssim.append(SSIM)
             except:
                 print("there is something wrong with " + i)
