@@ -320,7 +320,7 @@ class Pix2PixModel(BaseModel):
             #fake_fft_p = (fake_fft_p - torch.mean(fake_fft_p)) / torch.std(fake_fft_p)
             #real_fft_p = (real_fft_p - torch.mean(real_fft_p)) / torch.std(real_fft_p)
 
-            self.loss_G_fft = 1*(self.criterionL2(fake_fft_m.to(self.opt.gpu_ids[0]),real_fft_m.to(self.opt.gpu_ids[0]))) #+ self.criterionL2(fake_fft_p.to(self.opt.gpu_ids[0]),real_fft_p.to(self.opt.gpu_ids[0])))
+            self.loss_G_fft = 30*(self.criterionL2(fake_fft_m.to(self.opt.gpu_ids[0]),real_fft_m.to(self.opt.gpu_ids[0]))) #+ self.criterionL2(fake_fft_p.to(self.opt.gpu_ids[0]),real_fft_p.to(self.opt.gpu_ids[0])))
             self.loss_G += self.loss_G_fft
 
         if 'perc' in self.opt.pattern or 'contextual' in self.opt.pattern:
